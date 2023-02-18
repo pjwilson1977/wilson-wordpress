@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="1234" class="wrapper"></div>
+    <div id="5678" class="wrapper"></div>
+    <div id="abcd" class="wrapper"></div>
+
+<script>
+
+document.addEventListener("readystatechange", (event) => {
+  if (event.target.readyState === "interactive") {
+    console.log('Initialize');
+
+    let wrappers = document.querySelectorAll('div.wrapper');
+    wrappers.forEach(element => {
+        console.log(element.id);
+
+        // Create AJAX function
+        element.innerHTML = 'ID: ' + element.id;
+
+    });
+
+  } else if (event.target.readyState === "complete") {
+    console.log('Loaded');
+  }
+});
+
+
+
+</script>
+
+</body>
+</html>
