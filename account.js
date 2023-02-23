@@ -14,115 +14,139 @@ $(document).ready(function () {
   let emailAddress = true; // True = doesn't exist
   let abn = true; // True = doesn't exist
   let recheck = false; // Ensure once the record in CRM is fixed by Membership, that the account creation can occur immediately
+  
+  // Check in case of page refresh and clear of input data
+  if($('#billing_email').val() === '') setCookieThirty('email-check', 'false');
+  if($('#billing_abn').val() === '') setCookieThirty('abn-check', 'false');
+  if($('#billing_email').val() === '' && $('#billing_abn').val() === '') setCookieThirty('check-code', 'false');
 
-  // Add ABN error message if no ABN added
-  if ($("#billing_abn").val() == "") {
-    $("#billing_abn_field").append(
-      "<span style='display:none;font-size:12px;' id='abn_invalid'>ABN or ACN number is invalid. If unsure of your ABN or ACN, please search <a href='https://abr.business.gov.au/' target='_blank'>here</a></span>"
-    );
+  let validationCode = parseInt(getCookie('check-code'));
+  let codeInput = $('#input_75_18');
+
+  // Check in case of page refresh
+  if(validationCode) {
+    $('.initial').addClass('d-none');
+    $('#place_order').prop("disabled",false);
+    $('#accountModal').modal('toggle');
+    if(validationCode === 3) { $('.multiple').removeClass('d-none'); $('.modal-header').addClass('d-none'); if($('.support-form').length == 1 ) { $('.support-form').removeClass('d-none'); codeInput.val(`${validationCode} - Multiple Emails`); } }
+    if(validationCode === 4) { $('.noaccess').removeClass('d-none'); $('.modal-header').addClass('d-none'); if($('.support-form').length == 1 ) { $('.support-form').removeClass('d-none'); codeInput.val(`${validationCode} - No Web Access`); }  }
+    if(validationCode === 5) { $('.inactive').removeClass('d-none'); $('.modal-header').addClass('d-none'); if($('.support-form').length == 1 ) { $('.support-form').removeClass('d-none'); codeInput.val(`${validationCode} - Inactive Contact`); } }
+    if(validationCode === 7) { $('.abnexists').removeClass('d-none'); $('.modal-header').addClass('d-none'); if($('.support-form').length == 1 ) { $('.support-form').removeClass('d-none'); codeInput.val(`${validationCode} - ABN Exists in CRM`); } }
   }
 
-  $("#billing_email").change(() => {
-    checkMiddleware("email");
+  // Add ABN error message if no ABN added
+  if($('#billing_abn').val() == '' ) {
+    $( '#billing_abn_field' ).append( "<span style='display:none;font-size:12px;' id='abn_invalid'>ABN or ACN number is invalid. If unsure of your ABN or ACN, please search <a href='https://abr.business.gov.au/' target='_blank'>here</a></span>" );
+  }
+
+  $( "#billing_email" ).change( () => {
+    checkMiddleware('email');
   });
 
-  $(".code").click(function () {
+  $( ".code" ).click( function() {
     resetModal();
     recheck = true;
-    let type = $(this).next(".type").text();
+    // DELETE COOKIE
+    let type = $(this).next('.type').text();
     checkMiddleware(type);
   });
 
   function checkMiddleware(type) {
     //console.log(`Starting: ${type}`);
-    let userInput = "";
-    let inputValidation = "";
+    let userInput ='';
+    let inputValidation ='';
 
-    if (type == "email") {
-      userInput = $("#billing_email").val();
-      inputValidation = "contact_validation";
+    if(type == 'email') {
+      userInput = $( "#billing_email" ).val();
+      inputValidation = 'contact_validation';
     }
-    if (type == "abn") {
-      userInput = $("#billing_abn").val();
-      inputValidation = "abn_validation";
+    if(type == 'abn') {
+      userInput = $( "#billing_abn" ).val();
+      inputValidation = 'abn_validation';
     }
 
-    if (userInput.length > 5) {
-      $("#place_order").prop("disabled", true);
-      $("#accountModal").modal({
-        backdrop: "static",
-        keyboard: false,
+    if(userInput.length > 5) {
+      $('#place_order').prop("disabled",true);
+      $('#accountModal').modal({
+        backdrop: 'static',
+        keyboard: false
       });
 
       resetModal();
 
       $.post(
-        ajaxurl,
-        {
-          action: inputValidation,
-          userInput: userInput,
-        },
-        (response) => {
-          var data = JSON.parse(response);
-          if (data) {
-            console.log("Data received: ", data["Code"]);
-          } else {
-            console.log("issue via JS");
-          }
+          ajaxurl,
+          {
+            action: inputValidation,
+            userInput: userInput
+          },
+          (response) => {
+            var data = JSON.parse(response);
+            if (data) {
+              console.log('Data received: ', data['Code']);
+            }
+            else {
+              console.log('issue via JS');
+            }
 
-          if (type == "email") {
-            emailAddress = data["Status"];
-          }
-          if (type == "abn") {
-            abn = data["Status"];
-          }
+            if($('.support-form').length == 0 ) {
+              $('.code').text(`Code: ${data['Code']}`);
+              $('.type').text(type);
+              $('.code').removeClass('d-none');
+            }
+            let emailInput = $('#input_75_2');
+            if($('#billing_email').val().length > 0 ) { emailInput.val($('#billing_email').val()); } else { emailInput.val(''); }
+            let firstNameInput = $('#input_75_1_3');
+            if($('#billing_first_name').val().length > 0 ) { firstNameInput.val($('#billing_first_name').val()); } else { firstNameInput.val(''); }
+            let lastNameInput = $('#input_75_1_6');
+            if($('#billing_last_name').val().length > 0 ) { lastNameInput.val($('#billing_last_name').val()); } else { lastNameInput.val(''); }
+            let phoneInput = $('#input_75_5');
+            if($('#billing_phone').val().length > 0 ) { phoneInput.val($('#billing_phone').val()); } else { phoneInput.val(''); }
+            let abnInput = $('#input_75_17');
+            if($('#billing_abn').val().length > 0 ) { abnInput.val($('#billing_abn').val()); } else { abnInput.val(''); }
 
-          if (abn && emailAddress) {
-            $("#place_order").prop("disabled", false);
-            $("#accountModal").modal("toggle");
-          } else {
-            $(".initial").addClass("d-none");
-            // Email Specific
-            if (data["Code"] === 2) {
-              $(".middleware").removeClass("d-none");
-              let createLink =
-                $("#create").attr("href") +
-                "?email=" +
-                $("#billing_email").val();
-              $("#create").attr("href", createLink);
-              if (recheck) {
-                // https://developer.mozilla.org/en-US/docs/Web/API/Window/location
+            if(type == 'email') emailAddress = data['Status'];
+            if(type == 'abn') abn = data['Status'];
+
+            if(abn && emailAddress) {
+              $('#place_order').prop("disabled",false);
+              $('#accountModal').modal('toggle');
+              setCookieThirty(type + '-check', 'true');
+              setCookieThirty('check-code', 'false');
+            } else {
+              $('.initial').addClass('d-none');
+
+              if(data['Code'] === 1) {
+                let loginLink =  $('#login').attr('href');
+                location = loginLink;
+              }
+              // Email Specific
+              if(data['Code'] === 2) {
+                let createLink = $('#create').attr('href') + '?type=checkout&email=' + $( "#billing_email" ).val();
                 location = createLink;
               }
-            }
-            if (data["Code"] === 1) {
-              $(".exists").removeClass("d-none");
-            }
-            if (data["Code"] === 3) {
-              $(".multiple").removeClass("d-none");
-            }
-            if (data["Code"] === 4) {
-              $(".noaccess").removeClass("d-none");
-            }
-            if (data["Code"] === 5) {
-              $(".inactive").removeClass("d-none");
-            }
-            // ABN Specific
-            if (data["Code"] === 7) {
-              $(".abnexists").removeClass("d-none");
-            }
-          }
 
-          $(".code").text(`Code: ${data["Code"]}`);
-          $(".type").text(type);
-          $(".code").removeClass("d-none");
-        }
+              // Set to false until passed
+              setCookieThirty(type + '-check', 'false');
+              setCookieThirty('check-code', data['Code']);
+
+              if(data['Code'] === 3) { $('.multiple').removeClass('d-none'); $('.modal-header').addClass('d-none'); $('.support-form').removeClass('d-none'); if($('.support-form').length == 1 ) { codeInput.val(`${data['Code']} - Multiple Emails`); } return; }
+              if(data['Code'] === 4) { $('.noaccess').removeClass('d-none'); $('.modal-header').addClass('d-none'); $('.support-form').removeClass('d-none'); if($('.support-form').length == 1 ) { codeInput.val(`${data['Code']} - No Web Access`); } return; }
+              if(data['Code'] === 5) { $('.inactive').removeClass('d-none'); $('.modal-header').addClass('d-none'); $('.support-form').removeClass('d-none'); if($('.support-form').length == 1 ) { codeInput.val(`${data['Code']} - Inactive Contact`); } return; }
+              // ABN Specific
+              if(data['Code'] === 7) { $('.abnexists').removeClass('d-none'); $('.modal-header').addClass('d-none'); $('.support-form').removeClass('d-none'); if($('.support-form').length == 1 ) { codeInput.val(`${data['Code']} - ABN Exists in CRM`);  } return; }
+
+            }
+
+          }
       );
     } else {
       console.log("Less than 5");
-      $("#place_order").prop("disabled", false);
+      $('#place_order').prop("disabled",false);
     }
+
   }
+
 
   $("#billing_abn").change(() => {
     const wrapper = $(this).closest(".form-row");
@@ -223,4 +247,12 @@ $(document).ready(function () {
     $(".abnexists").addClass("d-none");
     $(".code").addClass("d-none");
   }
+  
+  function setCookieThirty(cname, cvalue) {
+    var d = new Date();
+    d.setTime(d.getTime() + (30*60*1000));
+    var expires = "expires="+ d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+  }
+  
 });
